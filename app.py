@@ -1,6 +1,6 @@
 import io
 import json
-from google import genai
+import google.generativeai as genai
 import openpyxl
 import streamlit as st
 
@@ -9,7 +9,9 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("🎨 [CP작성] 론칭작 일러스트 작품 소개서 AI 자동 생성기 (Gemini 무료 버전)")
+st.title(
+    "🎨 [CP작성] 론칭작 일러스트 작품 소개서 AI 자동 생성기 (Gemini 무료 버전)"
+)
 st.markdown(
     "원고와 인물 이름만 넣으면 Gemini AI가 원고를 분석하여 양식(`guide` 시트 E열"
     " 9~36행) 제약조건에 맞춰 카피 초안을 작성해 줍니다."
@@ -24,15 +26,18 @@ gemini_api_key = st.sidebar.text_input(
 )
 
 st.sidebar.subheader("작품 및 인물 설정")
-work_title = st.sidebar.text_input("작품 제목", value="혼불")
-char_1 = st.sidebar.text_input("주인공 1 (예: 윤태희)", value="윤태희")
-char_2 = st.sidebar.text_input("주인공 2 (예: 김재겸)", value="김재겸")
+work_title = st.sidebar.text_input("작품 제목", value="빙의자 테스트")
+char_1 = st.sidebar.text_input("주인공 1 (예: 류시헌)", value="류시헌")
+char_2 = st.sidebar.text_input("주인공 2 (예: 송희민)", value="송희민")
 
 st.subheader("📄 원고 입력")
 script_text = st.text_area(
     "분석할 원고 전체 텍스트(또는 시놉시스/초반 분량)를 붙여넣으세요:",
     height=300,
-    placeholder="여기에 원고 텍스트를 입력하면 AI가 분석하여 카피를 추출 및 생성합니다.",
+    placeholder=(
+        "여기에 원고 텍스트를 입력하면 AI가 분석하여 카피를 추출 및"
+        " 생성합니다."
+    ),
 )
 
 uploaded_file = st.file_uploader(
@@ -42,7 +47,10 @@ uploaded_file = st.file_uploader(
 
 
 def generate_draft_with_gemini(api_key, title, c1, c2, script):
-  client = genai.Client(api_key=api_key)
+  genai.configure(api_key=api_key)
+
+  # 가장 안정적이고 빠른 무료 Flash 모델 지정
+  model = genai.GenerativeModel("gemini-1.5-flash")
 
   prompt = f"""
     당신은 웹소설/웹툰 CP사의 전문 마케터이자 카피라이터입니다.
@@ -85,10 +93,7 @@ def generate_draft_with_gemini(api_key, title, c1, c2, script):
     ```
     """
 
-  response = client.models.generate_content(
-    model="gemini-1.5-flash",
-    contents=prompt,
-)
+  response = model.generate_content(prompt)
   text = response.text.strip()
 
   # 마크다운 블록 제거 처리
@@ -106,7 +111,10 @@ if st.button("🚀 AI 초안 분석 및 엑셀 생성하기"):
   elif not script_text.strip():
     st.error("원고 텍스트를 입력해주세요.")
   elif uploaded_file is None:
-    st.error("엑셀 양식 파일([CP작성] 론칭작 일러스트 작품 소개서.xlsx)을 업로드해주세요.")
+    st.error(
+        "엑셀 양식 파일([CP작성] 론칭작 일러스트 작품 소개서.xlsx)을"
+        " 업로드해주세요."
+    )
   else:
     with st.spinner("Gemini AI가 원고를 분석하고 초안을 작성 중입니다..."):
       try:
