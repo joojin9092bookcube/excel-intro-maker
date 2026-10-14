@@ -6,6 +6,18 @@ st.set_page_config(
     page_title="론칭작 일러스트 작품 소개서 초안 생성기", layout="wide"
 )
 
+# 🔒 보안을 위한 비밀번호 설정 로직
+st.sidebar.header("🔐 보안 인증")
+# 원하시는 비밀번호로 변경하세요 (현재 설정: bookcube1234)
+input_password = st.sidebar.text_input(
+    "접속 비밀번호를 입력하세요", type="password"
+)
+
+if input_password != "bookcube1234":
+  st.warning("⚠️ 올바른 접속 비밀번호를 입력해야 프로그램이 실행됩니다.")
+  st.info("비밀번호는 담당자에게 문의해 주세요.")
+  st.stop()  # 비밀번호가 일치하지 않으면 아래 코드를 실행하지 않고 멈춥니다.
+
 st.title("🎨 [CP작성] 론칭작 일러스트 작품 소개서 자동 생성기")
 st.markdown(
     "지정된 양식(`guide` 시트 E열 9~36행)에 맞춰 원고와 인물 설정을 기반으로 초안을 작성하고 엑셀 파일로 다운로드합니다."
@@ -26,7 +38,7 @@ keyword_input = st.sidebar.text_input(
 )
 intro_text = st.sidebar.text_area(
     "인트로 2줄 (독자의 흥미를 끌 가장 후킹한 2줄)",
-    value="귀시고 인간이고 다 싫어.\n세상을 등진 외톨이.",
+    value="귀신이고 인간이고 다 싫어.\n세상을 등진 외톨이.",
 )
 dialogue_1 = st.sidebar.text_area(
     "첫 번째 대화 구간 (인물1, 인물2 대화 3줄씩)",
@@ -107,29 +119,33 @@ if st.button("🚀 초안 엑셀 파일 생성하기"):
         out_lines = [l.strip() for l in outro_text.split("\n") if l.strip()][:2]
 
         # E열 9~36행 매핑 채우기
-        # E9: 메인카피 (키워드)
         sheet["E9"] = kw_str
-        sheet["E10"] = "톨쥬 화제작 리다무 론칭!"  # 후킹 강조
+        sheet["E10"] = "톨쥬 화제작 리다무 론칭!"
 
-        # E11: 작품 제목
         sheet["E11"] = work_title
 
-        # E12~E13: 인트로 (2줄)
         sheet["E12"] = intro_lines[0] if len(intro_lines) > 0 else ""
         sheet["E13"] = intro_lines[1] if len(intro_lines) > 1 else ""
 
-        # D15, D18: 인물 이름 매핑
         sheet["D15"] = char_1
         sheet["D18"] = char_2
 
         # 첫 번째 대화 (14~16행)
-        d1_part1 = d1_lines[:3] if len(d1_lines) >= 3 else d1_lines + [""] * (3 - len(d1_lines))
+        d1_part1 = (
+            d1_lines[:3]
+            if len(d1_lines) >= 3
+            else d1_lines + [""] * (3 - len(d1_lines))
+        )
         sheet["E14"] = d1_part1[0] if len(d1_part1) > 0 else ""
         sheet["E15"] = d1_part1[1] if len(d1_part1) > 1 else ""
         sheet["E16"] = d1_part1[2] if len(d1_part1) > 2 else ""
 
         # 첫 번째 대화 (17~19행)
-        d1_part2 = d1_lines[3:6] if len(d1_lines) >= 6 else d1_lines[3:] + [""] * (6 - len(d1_lines))
+        d1_part2 = (
+            d1_lines[3:6]
+            if len(d1_lines) >= 6
+            else d1_lines[3:] + [""] * (6 - len(d1_lines))
+        )
         sheet["E17"] = d1_part2[0] if len(d1_part2) > 0 else ""
         sheet["E18"] = d1_part2[1] if len(d1_part2) > 1 else ""
         sheet["E19"] = d1_part2[2] if len(d1_part2) > 2 else ""
@@ -140,18 +156,25 @@ if st.button("🚀 초안 엑셀 파일 생성하기"):
               syn_lines[idx] if idx < len(syn_lines) else ""
           )
 
-        # D25, D28: 인물 이름 교차 매핑
         sheet["D25"] = char_2
         sheet["D28"] = char_1
 
         # 두 번째 대화 (24~26행)
-        d2_part1 = d2_lines[:3] if len(d2_lines) >= 3 else d2_lines + [""] * (3 - len(d2_lines))
+        d2_part1 = (
+            d2_lines[:3]
+            if len(d2_lines) >= 3
+            else d2_lines + [""] * (3 - len(d2_lines))
+        )
         sheet["E24"] = d2_part1[0] if len(d2_part1) > 0 else ""
         sheet["E25"] = d2_part1[1] if len(d2_part1) > 1 else ""
         sheet["E26"] = d2_part1[2] if len(d2_part1) > 2 else ""
 
         # 두 번째 대화 (27~29행)
-        d2_part2 = d2_lines[3:6] if len(d2_lines) >= 6 else d2_lines[3:] + [""] * (6 - len(d2_lines))
+        d2_part2 = (
+            d2_lines[3:6]
+            if len(d2_lines) >= 6
+            else d2_lines[3:] + [""] * (6 - len(d2_lines))
+        )
         sheet["E27"] = d2_part2[0] if len(d2_part2) > 0 else ""
         sheet["E28"] = d2_part2[1] if len(d2_part2) > 1 else ""
         sheet["E29"] = d2_part2[2] if len(d2_part2) > 2 else ""
@@ -162,15 +185,12 @@ if st.button("🚀 초안 엑셀 파일 생성하기"):
               plot_lines[idx] if idx < len(plot_lines) else ""
           )
 
-        # 가장 후킹한 대사 (33~34행)
         sheet["E33"] = hook_lines[0] if len(hook_lines) > 0 else ""
         sheet["E34"] = hook_lines[1] if len(hook_lines) > 1 else ""
 
-        # 마무리 소개 (35~36행)
         sheet["E35"] = out_lines[0] if len(out_lines) > 0 else ""
         sheet["E36"] = out_lines[1] if len(out_lines) > 1 else ""
 
-        # 결과 파일 바이트로 변환
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
