@@ -49,8 +49,8 @@ uploaded_file = st.file_uploader(
 def generate_draft_with_gemini(api_key, title, c1, c2, script):
   genai.configure(api_key=api_key)
 
-  # 가장 안정적이고 빠른 무료 Flash 모델 지정
-  model = genai.GenerativeModel("gemini-1.5-flash")
+  # 최신 환경에서 안정적으로 지원되는 gemini-2.0-flash 모델 지정
+  model = genai.GenerativeModel("gemini-2.0-flash")
 
   prompt = f"""
     당신은 웹소설/웹툰 CP사의 전문 마케터이자 카피라이터입니다.
