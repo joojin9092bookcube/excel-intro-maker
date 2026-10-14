@@ -49,8 +49,8 @@ uploaded_file = st.file_uploader(
 def generate_draft_with_gemini(api_key, title, c1, c2, script):
   genai.configure(api_key=api_key)
 
-  # 최신 환경에서 안정적으로 지원되는 gemini-2.0-flash 모델 지정
-  model = genai.GenerativeModel("gemini-2.0-flash")
+  # 안내된 최신 모델명으로 지정
+  model = genai.GenerativeModel("gemini-3.8-flash")
 
   prompt = f"""
     당신은 웹소설/웹툰 CP사의 전문 마케터이자 카피라이터입니다.
@@ -96,7 +96,6 @@ def generate_draft_with_gemini(api_key, title, c1, c2, script):
   response = model.generate_content(prompt)
   text = response.text.strip()
 
-  # 마크다운 블록 제거 처리
   if "```json" in text:
     text = text.split("```json")[1].split("```")[0].strip()
   elif "```" in text:
