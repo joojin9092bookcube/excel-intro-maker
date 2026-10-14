@@ -86,9 +86,9 @@ def generate_draft_with_gemini(api_key, title, c1, c2, script):
     """
 
   response = client.models.generate_content(
-      model="gemini-2.5-flash",
-      contents=prompt,
-  )
+    model="gemini-1.5-flash",
+    contents=prompt,
+)
   text = response.text.strip()
 
   # 마크다운 블록 제거 처리
