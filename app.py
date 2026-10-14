@@ -1,24 +1,26 @@
 import io
 import json
+import google.generativeai as genai
 import openpyxl
-import openai
 import streamlit as st
 
 st.set_page_config(
-    page_title="론칭작 일러스트 작품 소개서 AI 자동 생성기",
+    page_title="론칭작 일러스트 작품 소개서 AI 자동 생성기 (무료)",
     layout="wide",
 )
 
-st.title("🎨 [CP작성] 론칭작 일러스트 작품 소개서 AI 자동 생성기")
+st.title("🎨 [CP작성] 론칭작 일러스트 작품 소개서 AI 자동 생성기 (Gemini 무료 버전)")
 st.markdown(
-    "원고와 인물 이름만 넣으면 AI가 원고를 분석하여 양식(`guide` 시트 E열"
+    "원고와 인물 이름만 넣으면 Gemini AI가 원고를 분석하여 양식(`guide` 시트 E열"
     " 9~36행) 제약조건에 맞춰 카피 초안을 작성해 줍니다."
 )
 
 # 1. 설정 및 입력 영역
 st.sidebar.header("⚙️ 기본 설정")
-openai_api_key = st.sidebar.text_input(
-    "OpenAI API Key (sk-...)", type="password"
+gemini_api_key = st.sidebar.text_input(
+    "Google Gemini API Key",
+    type="password",
+    help="Google AI Studio에서 무료로 발급받으실 수 있습니다.",
 )
 
 st.sidebar.subheader("작품 및 인물 설정")
@@ -39,8 +41,10 @@ uploaded_file = st.file_uploader(
 )
 
 
-def generate_draft_with_ai(api_key, title, c1, c2, script):
-  client = openai.OpenAI(api_key=api_key)
+def generate_draft_with_gemini(api_key, title, c1, c2, script):
+  genai.configure(api_key=api_key)
+  # 무료로 사용 가능한 최신 gemini 모델 설정
+  model = genai.GenerativeModel("gemini-2.5-flash")
 
   prompt = f"""
     당신은 웹소설/웹툰 CP사의 전문 마케터이자 카피라이터입니다.
@@ -66,7 +70,7 @@ def generate_draft_with_ai(api_key, title, c1, c2, script):
     9. hooking_line: 작품을 읽고 싶어지는 가장 후킹한 대사 (정확히 2줄, 리스트 형태)
     10. outro: 흥미를 유발하는 마무리 소개 (정확히 2줄, 리스트 형태)
 
-    반드시 아래 JSON 형식으로만 응답해 주세요. 각 줄은 칸에 꽉 차거나 넘치지 않게 간결하고 후킹하게 작성하세요.
+    반드시 마크다운 코드 블록(```json 과 ```)을 사용하여 아래 JSON 형식으로만 응답해 주세요. 다른 설명글은 작성하지 마세요.
     ```json
     {{
         "keywords": "#동양풍 #현대판타지 #배틀연애",
@@ -83,32 +87,32 @@ def generate_draft_with_ai(api_key, title, c1, c2, script):
     ```
     """
 
-  response = client.chat.completions.create(
-      model="gpt-4o-mini",
-      messages=[{"role": "user", "content": prompt}],
-      temperature=0.7,
-      response_format={"type": "json_object"},
-  )
+  response = model.generate_content(prompt)
+  text = response.text.strip()
 
-  return json.loads(response.choices[0].message.content)
+  # 마크다운 블록 제거 처리
+  if "```json" in text:
+    text = text.split("```json")[1].split("```")[0].strip()
+  elif "```" in text:
+    text = text.split("```")[1].split("```")[0].strip()
+
+  return json.loads(text)
 
 
 if st.button("🚀 AI 초안 분석 및 엑셀 생성하기"):
-  if not openai_api_key:
-    st.error("OpenAI API Key를 입력해주세요.")
+  if not gemini_api_key:
+    st.error("Google Gemini API Key를 입력해주세요.")
   elif not script_text.strip():
     st.error("원고 텍스트를 입력해주세요.")
   elif uploaded_file is None:
     st.error("엑셀 양식 파일([CP작성] 론칭작 일러스트 작품 소개서.xlsx)을 업로드해주세요.")
   else:
-    with st.spinner("AI가 원고를 읽고 소개서 카피 초안을 작성 중입니다..."):
+    with st.spinner("Gemini AI가 원고를 분석하고 초안을 작성 중입니다..."):
       try:
-        # AI 카피 분석 생성
-        ai_data = generate_draft_with_ai(
-            openai_api_key, work_title, char_1, char_2, script_text
+        ai_data = generate_draft_with_gemini(
+            gemini_api_key, work_title, char_1, char_2, script_text
         )
 
-        # 엑셀 파일 로드 및 채우기
         wb = openpyxl.load_workbook(uploaded_file)
         sheet = wb["guide"]
 
@@ -116,68 +120,36 @@ if st.button("🚀 AI 초안 분석 및 엑셀 생성하기"):
         sheet["E10"] = "화제작 론칭!"
         sheet["E11"] = work_title
 
-        # 인트로 (E12~E13)
         intro = ai_data.get("intro", [])
         sheet["E12"] = intro[0] if len(intro) > 0 else ""
         sheet["E13"] = intro[1] if len(intro) > 1 else ""
 
-        # 인물 1, 2 이름
         sheet["D15"] = char_1
         sheet["D18"] = char_2
 
-        # 첫 번째 대화 (14~16, 17~19)
         d1_c1 = ai_data.get("dialogue1_c1", [])
         d1_c2 = ai_data.get("dialogue1_c2", [])
         for i in range(3):
           sheet[f"E{14+i}"] = d1_c1[i] if i < len(d1_c1) else ""
           sheet[f"E{17+i}"] = d1_c2[i] if i < len(d1_c2) else ""
 
-        # 시놉시스 (20~23)
         syn = ai_data.get("synopsis", [])
         for i in range(4):
           sheet[f"E{20+i}"] = syn[i] if i < len(syn) else ""
 
-        # 인물 교차
         sheet["D25"] = char_2
         sheet["D28"] = char_1
 
-        # 두 번째 대화 (24~26, 27~29)
         d2_c2 = ai_data.get("dialogue2_c2", [])
         d2_c1 = ai_data.get("dialogue2_c1", [])
         for i in range(3):
           sheet[f"E{24+i}"] = d2_c2[i] if i < len(d2_c2) else ""
           sheet[f"E{27+i}"] = d2_c1[i] if i < len(d2_c1) else ""
 
-        # 전개 요약 (30~32)
         plot = ai_data.get("plot_summary", [])
         for i in range(3):
           sheet[f"E{30+i}"] = plot[i] if i < len(plot) else ""
 
-        # 후킹 대사 (33~34)
         hook = ai_data.get("hooking_line", [])
         sheet["E33"] = hook[0] if len(hook) > 0 else ""
-        sheet["E34"] = hook[1] if len(hook) > 1 else ""
-
-        # 마무리 (35~36)
-        outro = ai_data.get("outro", [])
-        sheet["E35"] = outro[0] if len(outro) > 0 else ""
-        sheet["E36"] = outro[1] if len(outro) > 1 else ""
-
-        # 다운로드 바이트 생성
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
-
-        file_name = f"[CP작성] 론칭작 일러스트 작품 소개서_{work_title}.xlsx"
-
-        st.success("🎉 AI가 초안을 완성했습니다!")
-        st.download_button(
-            label="📥 완성된 엑셀 파일 다운로드",
-            data=output,
-            file_name=file_name,
-            mime=(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            ),
-        )
-      except Exception as e:
-        st.error(f"오류가 발생했습니다: {e}")
+        sheet["E34"] = hook[1] if len(
