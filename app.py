@@ -1,6 +1,6 @@
 import io
 import json
-import google.generativeai as genai
+from google import genai
 import openpyxl
 import streamlit as st
 
@@ -42,9 +42,7 @@ uploaded_file = st.file_uploader(
 
 
 def generate_draft_with_gemini(api_key, title, c1, c2, script):
-  genai.configure(api_key=api_key)
-  # 무료로 사용 가능한 최신 gemini 모델 설정
-  model = genai.GenerativeModel("gemini-2.5-flash")
+  client = genai.Client(api_key=api_key)
 
   prompt = f"""
     당신은 웹소설/웹툰 CP사의 전문 마케터이자 카피라이터입니다.
@@ -87,7 +85,10 @@ def generate_draft_with_gemini(api_key, title, c1, c2, script):
     ```
     """
 
-  response = model.generate_content(prompt)
+  response = client.models.generate_content(
+      model="gemini-2.5-flash",
+      contents=prompt,
+  )
   text = response.text.strip()
 
   # 마크다운 블록 제거 처리
@@ -152,4 +153,26 @@ if st.button("🚀 AI 초안 분석 및 엑셀 생성하기"):
 
         hook = ai_data.get("hooking_line", [])
         sheet["E33"] = hook[0] if len(hook) > 0 else ""
-        sheet["E34"] = hook[1] if len(
+        sheet["E34"] = hook[1] if len(hook) > 1 else ""
+
+        outro = ai_data.get("outro", [])
+        sheet["E35"] = outro[0] if len(outro) > 0 else ""
+        sheet["E36"] = outro[1] if len(outro) > 1 else ""
+
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        file_name = f"[CP작성] 론칭작 일러스트 작품 소개서_{work_title}.xlsx"
+
+        st.success("🎉 AI가 초안을 완성했습니다!")
+        st.download_button(
+            label="📥 완성된 엑셀 파일 다운로드",
+            data=output,
+            file_name=file_name,
+            mime=(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ),
+        )
+      except Exception as e:
+        st.error(f"오류가 발생했습니다: {e}")
